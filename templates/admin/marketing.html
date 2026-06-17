@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}营销活动{% endblock %}
+{% block content %}
+<section class="admin-shell">
+  <aside class="side">
+    <strong>商家后台</strong>
+    <a href="{{ url_for('admin_dashboard') }}">经营概览</a>
+    <a href="{{ url_for('admin_product_new') }}">添加商品</a>
+    <a href="{{ url_for('admin_marketing') }}">营销活动</a>
+  </aside>
+  <div class="admin-main">
+    <div class="split thirds">
+      <form method="post" class="form-card">
+        <input type="hidden" name="kind" value="coupon">
+        <h2>优惠券</h2>
+        <label>券码<input name="code" required></label>
+        <label>标题<input name="title" required></label>
+        <label>类型<select name="discount_type"><option value="amount">立减</option><option value="percent">折扣</option></select></label>
+        <label>优惠值<input name="discount_value" type="number" step="0.01" value="10" required></label>
+        <label>门槛<input name="min_amount" type="number" step="0.01" value="99" required></label>
+        <label>数量<input name="total" type="number" value="100" required></label>
+        <label>有效天数<input name="days" type="number" value="30" required></label>
+        <button>创建</button>
+      </form>
+      <form method="post" class="form-card">
+        <input type="hidden" name="kind" value="group">
+        <h2>拼团</h2>
+        <label>商品<select name="product_id">{% for p in products %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select></label>
+        <label>标题<input name="title" required></label>
+        <label>拼团价<input name="group_price" type="number" step="0.01" required></label>
+        <label>成团人数<input name="required_members" type="number" value="3" required></label>
+        <label>有效天数<input name="days" type="number" value="15" required></label>
+        <button>创建</button>
+      </form>
+      <form method="post" class="form-card">
+        <input type="hidden" name="kind" value="lottery">
+        <h2>抽奖</h2>
+        <label>活动名<input name="title" required></label>
+        <label>奖品<input name="prize_name" required></label>
+        <label>库存<input name="quantity" type="number" value="20" required></label>
+        <label>中奖概率<input name="probability" type="number" min="0" max="1" step="0.01" value="0.1" required></label>
+        <label>有效天数<input name="days" type="number" value="15" required></label>
+        <button>创建</button>
+      </form>
+    </div>
+    <section class="band flush">
+      <div class="section-head"><h2>已创建活动</h2><span>优惠券 / 拼团 / 抽奖</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>类型</th><th>名称</th><th>数据</th><th>结束时间</th></tr></thead>
+          <tbody>
+            {% for c in coupons %}<tr><td>优惠券</td><td>{{ c.title }}</td><td>{{ c.code }} · {{ c.claimed }}/{{ c.total }}</td><td>{{ c.ends_at }}</td></tr>{% endfor %}
+            {% for g in groups %}<tr><td>拼团</td><td>{{ g.title }}</td><td>{{ g.product_name }} · {{ g.current_members }}/{{ g.required_members }}</td><td>{{ g.ends_at }}</td></tr>{% endfor %}
+            {% for l in lotteries %}<tr><td>抽奖</td><td>{{ l.title }}</td><td>{{ "启用" if l.is_active else "停用" }}</td><td>{{ l.ends_at }}</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</section>
+{% endblock %}

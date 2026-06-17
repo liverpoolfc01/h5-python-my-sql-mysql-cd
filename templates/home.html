@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}云栈优选 H5商城{% endblock %}
+{% block content %}
+<section class="hero">
+  <div>
+    <p class="eyebrow">精选零售 · 当日活动</p>
+    <h1>云栈优选</h1>
+    <p>商品、优惠券、拼团和抽奖都已经接入 MySQL，用户可直接登录下单。</p>
+  </div>
+  <form class="search" method="get">
+    <input name="q" value="{{ request.args.get('q','') }}" placeholder="搜索商品">
+    <select name="category">
+      <option value="">全部分类</option>
+      {% for c in categories %}
+        <option value="{{ c.category }}" {% if request.args.get('category') == c.category %}selected{% endif %}>{{ c.category }}</option>
+      {% endfor %}
+    </select>
+    <button>搜索</button>
+  </form>
+</section>
+
+<section class="band">
+  <div class="section-head">
+    <h2>优惠券</h2>
+    <span>先领券再下单</span>
+  </div>
+  <div class="coupon-row">
+    {% for coupon in coupons %}
+      <article class="coupon">
+        <strong>{{ coupon.title }}</strong>
+        <p>满 ¥{{ coupon.min_amount }} 可用 · 剩 {{ coupon.total - coupon.claimed }} 张</p>
+        <form method="post" action="{{ url_for('claim_coupon', coupon_id=coupon.id) }}">
+          <button>领取</button>
+        </form>
+      </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="band">
+  <div class="section-head">
+    <h2>拼团活动</h2>
+    <span>低价成团</span>
+  </div>
+  <div class="activity-grid">
+    {% for group in groups %}
+      <article class="activity">
+        <div class="thumb small" style="--tone: {{ group.image_color }}"></div>
+        <div>
+          <strong>{{ group.title }}</strong>
+          <p>{{ group.product_name }} · ¥{{ group.group_price }} · {{ group.current_members }}/{{ group.required_members }} 人</p>
+        </div>
+        <form method="post" action="{{ url_for('join_group', group_id=group.id) }}">
+          <button>参团</button>
+        </form>
+      </article>
+    {% endfor %}
+    {% if lottery %}
+      <article class="activity lottery">
+        <div>
+          <strong>{{ lottery.title }}</strong>
+          <p>登录用户每日可抽，结果写入数据库。</p>
+        </div>
+        <form method="post" action="{{ url_for('draw_lottery', lottery_id=lottery.id) }}">
+          <button>抽奖</button>
+        </form>
+      </article>
+    {% endif %}
+  </div>
+</section>
+
+<section class="band">
+  <div class="section-head">
+    <h2>全部商品</h2>
+    <span>{{ products|length }} 件在售</span>
+  </div>
+  <div class="product-grid">
+    {% for product in products %}
+      <a class="product-card" href="{{ url_for('product_detail', product_id=product.id) }}">
+        <div class="thumb" style="--tone: {{ product.image_color }}">
+          <span>{{ product.category }}</span>
+        </div>
+        <div class="product-body">
+          <h3>{{ product.name }}</h3>
+          <p>{{ product.description }}</p>
+          <div class="price-row">
+            <strong>¥{{ product.price }}</strong>
+            <span>库存 {{ product.stock }}</span>
+          </div>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

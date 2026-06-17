@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name }}{% endblock %}
+{% block content %}
+<section class="detail">
+  <div class="thumb detail-thumb" style="--tone: {{ product.image_color }}"><span>{{ product.category }}</span></div>
+  <div class="detail-info">
+    <p class="eyebrow">{{ product.category }}</p>
+    <h1>{{ product.name }}</h1>
+    <p>{{ product.description }}</p>
+    <strong class="big-price">¥{{ product.price }}</strong>
+    <p class="muted">库存 {{ product.stock }}</p>
+    <form class="order-form" method="post" action="{{ url_for('create_order') }}">
+      <input type="hidden" name="product_id" value="{{ product.id }}">
+      <label>数量<input type="number" name="quantity" value="1" min="1" max="{{ product.stock }}"></label>
+      <label>优惠券
+        <select name="coupon_id">
+          <option value="">不使用</option>
+          {% for coupon in coupons %}
+            <option value="{{ coupon.id }}">{{ coupon.title }} · 满 {{ coupon.min_amount }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>收货人<input name="receiver_name" value="测试用户" required></label>
+      <label>手机号<input name="receiver_phone" value="13800000000" required></label>
+      <label>地址<input name="receiver_address" value="上海市测试路 100 号" required></label>
+      <button>立即下单</button>
+    </form>
+    {% if groups %}
+      <div class="mini-list">
+        {% for group in groups %}
+          <form method="post" action="{{ url_for('join_group', group_id=group.id) }}">
+            <span>{{ group.title }} · 拼团价 ¥{{ group.group_price }}</span>
+            <button>参团</button>
+          </form>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

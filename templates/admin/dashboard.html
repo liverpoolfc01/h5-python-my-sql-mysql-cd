@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}商家后台{% endblock %}
+{% block content %}
+<section class="admin-shell">
+  <aside class="side">
+    <strong>商家后台</strong>
+    <a href="{{ url_for('admin_dashboard') }}">经营概览</a>
+    <a href="{{ url_for('admin_product_new') }}">添加商品</a>
+    <a href="{{ url_for('admin_marketing') }}">营销活动</a>
+  </aside>
+  <div class="admin-main">
+    <div class="metrics">
+      <div><span>商品</span><strong>{{ stats.products }}</strong></div>
+      <div><span>订单</span><strong>{{ stats.orders }}</strong></div>
+      <div><span>销售额</span><strong>¥{{ stats.sales }}</strong></div>
+      <div><span>用户</span><strong>{{ stats.customers }}</strong></div>
+    </div>
+    <div class="split">
+      <section>
+        <div class="section-head"><h2>商品管理</h2><a class="text-link" href="{{ url_for('admin_product_new') }}">新增</a></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>商品</th><th>分类</th><th>价格</th><th>库存</th></tr></thead>
+            <tbody>
+              {% for product in products %}
+              <tr><td>{{ product.name }}</td><td>{{ product.category }}</td><td>¥{{ product.price }}</td><td>{{ product.stock }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section>
+        <div class="section-head"><h2>订单管理</h2><span>最近 20 条</span></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>用户</th><th>商品</th><th>应付</th><th>状态</th></tr></thead>
+            <tbody>
+              {% for order in orders %}
+              <tr><td>{{ order.username }}</td><td>{{ order.items }}</td><td>¥{{ order.payable_amount }}</td><td>{{ order.status }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+</section>
+{% endblock %}

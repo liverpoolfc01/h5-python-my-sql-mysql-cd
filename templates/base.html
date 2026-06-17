@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}云栈优选{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('home') }}">云栈优选</a>
+    <nav>
+      <a href="{{ url_for('home') }}">H5商城</a>
+      {% if current_user.id and current_user.role == 'customer' %}
+        <a href="{{ url_for('my_orders') }}">我的订单</a>
+      {% endif %}
+      {% if current_user.id and current_user.role == 'merchant' %}
+        <a href="{{ url_for('admin_dashboard') }}">商家后台</a>
+        <a href="{{ url_for('admin_marketing') }}">营销</a>
+      {% endif %}
+      {% if current_user.id %}
+        <span>{{ current_user.username }}</span>
+        <a href="{{ url_for('logout') }}">退出</a>
+      {% else %}
+        <a href="{{ url_for('login') }}">登录</a>
+      {% endif %}
+    </nav>
+  </header>
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      <div class="toast">
+        {% for message in messages %}<span>{{ message }}</span>{% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+  <main>{% block content %}{% endblock %}</main>
+</body>
+</html>
