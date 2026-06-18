@@ -31,10 +31,36 @@ DB_CONFIG = {
     "database": os.getenv("DB_NAME", "codex_ecommerce_demo"),
     "charset": "utf8mb4",
     "cursorclass": pymysql.cursors.DictCursor,
+    "connect_timeout": int(os.getenv("DB_CONNECT_TIMEOUT", "3")),
+    "read_timeout": int(os.getenv("DB_READ_TIMEOUT", "5")),
+    "write_timeout": int(os.getenv("DB_WRITE_TIMEOUT", "5")),
 }
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "codex-ecommerce-dev-secret")
+
+FALLBACK_PRODUCTS = [
+    ("云感针织衫", "女装", "129.00", 220, "#d85c5c", "柔软亲肤，适合通勤与日常搭配。"),
+    ("轻跑运动鞋", "鞋包", "269.00", 180, "#2864c8", "缓震鞋底，适合城市慢跑。"),
+    ("陶瓷马克杯", "家居", "39.90", 360, "#f2a03d", "高温烧制，早餐咖啡都顺手。"),
+    ("无线蓝牙耳机", "数码", "199.00", 145, "#1f9d89", "低延迟连接，通勤听歌清晰稳定。"),
+    ("儿童绘本套装", "母婴", "88.00", 90, "#8e6bd8", "精选启蒙故事，亲子阅读更轻松。"),
+    ("低脂燕麦礼盒", "食品", "69.00", 260, "#b67b43", "早餐代餐，搭配牛奶口感更佳。"),
+    ("便携保温杯", "户外", "79.00", 310, "#2c8c70", "长效保温，车载和露营都适用。"),
+    ("护眼台灯", "家居", "159.00", 128, "#e0b531", "三档调光，学习办公不刺眼。"),
+    ("真皮双肩包", "鞋包", "329.00", 65, "#4b5563", "大容量分区，短途出行好整理。"),
+    ("空气炸锅", "家电", "399.00", 74, "#c75d7b", "少油烹饪，薯条鸡翅都方便。"),
+    ("玻璃收纳罐", "家居", "49.90", 430, "#7aa95c", "密封防潮，厨房收纳更整洁。"),
+    ("男士休闲衬衫", "男装", "119.00", 205, "#5572a7", "挺括版型，单穿内搭都合适。"),
+    ("维生素软糖", "健康", "59.00", 188, "#dc7a45", "每日营养补充，水果风味。"),
+    ("智能体脂秤", "数码", "149.00", 133, "#5d8ca8", "多项身体数据，家庭健康管理。"),
+    ("香薰蜡烛", "美妆", "69.90", 240, "#b56aa1", "舒缓香调，适合睡前放松。"),
+    ("折叠露营椅", "户外", "139.00", 96, "#56834c", "稳固轻便，收纳不占空间。"),
+    ("宠物自动饮水机", "宠物", "129.00", 112, "#5096b3", "循环活水，容量适合猫咪小犬。"),
+    ("有机洗发水", "美妆", "89.00", 173, "#3b9c75", "温和清洁，清爽不厚重。"),
+    ("积木创意套装", "玩具", "109.00", 84, "#d04747", "开放式拼搭，训练空间想象。"),
+    ("轻薄防晒衣", "服饰", "99.00", 265, "#5c80c9", "UPF 防晒，夏季户外必备。"),
+]
 
 
 def get_request_db():
@@ -117,6 +143,49 @@ def calc_discount(total, coupon):
     return min(total, Decimal(str(coupon["discount_value"]))).quantize(Decimal("0.01"))
 
 
+def fallback_home_data():
+    products = [
+        {
+            "id": index,
+            "name": name,
+            "category": category,
+            "price": Decimal(price),
+            "stock": stock,
+            "image_color": color,
+            "description": description,
+        }
+        for index, (name, category, price, stock, color, description) in enumerate(FALLBACK_PRODUCTS, start=1)
+    ]
+    categories = [{"category": item["category"]} for item in products]
+    unique_categories = {item["category"]: item for item in categories}
+    coupons = [
+        {"id": 1, "title": "新人立减 20 元", "min_amount": Decimal("99.00"), "total": 500, "claimed": 0},
+        {"id": 2, "title": "全场 85 折券", "min_amount": Decimal("199.00"), "total": 200, "claimed": 0},
+    ]
+    groups = [
+        {
+            "id": 1,
+            "title": "云感针织衫 3 人拼团",
+            "product_name": "云感针织衫",
+            "group_price": Decimal("99.00"),
+            "current_members": 0,
+            "required_members": 3,
+            "image_color": "#d85c5c",
+        },
+        {
+            "id": 2,
+            "title": "轻跑运动鞋 5 人拼团",
+            "product_name": "轻跑运动鞋",
+            "group_price": Decimal("219.00"),
+            "current_members": 0,
+            "required_members": 5,
+            "image_color": "#2864c8",
+        },
+    ]
+    lottery = {"id": 1, "title": "618 幸运抽奖"}
+    return products, list(unique_categories.values()), coupons, groups, lottery
+
+
 @app.context_processor
 def inject_user():
     return {"current_user": {"id": session.get("user_id"), "username": session.get("username"), "role": session.get("role")}}
@@ -134,24 +203,32 @@ def home():
     if category:
         filters.append("category=%s")
         params.append(category)
-    products = query_all(f"SELECT * FROM products WHERE {' AND '.join(filters)} ORDER BY id DESC", params)
-    categories = query_all("SELECT DISTINCT category FROM products WHERE is_active=1 ORDER BY category")
-    coupons = query_all(
-        """
-        SELECT * FROM coupons
-        WHERE is_active=1 AND starts_at <= NOW() AND ends_at >= NOW() AND claimed < total
-        ORDER BY id DESC LIMIT 4
-        """
-    )
-    groups = query_all(
-        """
-        SELECT gb.*, p.name AS product_name, p.image_color
-        FROM group_buys gb JOIN products p ON p.id=gb.product_id
-        WHERE gb.is_active=1 AND gb.ends_at >= NOW()
-        ORDER BY gb.id DESC LIMIT 3
-        """
-    )
-    lottery = query_one("SELECT * FROM lotteries WHERE is_active=1 AND ends_at >= NOW() ORDER BY id DESC LIMIT 1")
+    try:
+        products = query_all(f"SELECT * FROM products WHERE {' AND '.join(filters)} ORDER BY id DESC", params)
+        categories = query_all("SELECT DISTINCT category FROM products WHERE is_active=1 ORDER BY category")
+        coupons = query_all(
+            """
+            SELECT * FROM coupons
+            WHERE is_active=1 AND starts_at <= NOW() AND ends_at >= NOW() AND claimed < total
+            ORDER BY id DESC LIMIT 4
+            """
+        )
+        groups = query_all(
+            """
+            SELECT gb.*, p.name AS product_name, p.image_color
+            FROM group_buys gb JOIN products p ON p.id=gb.product_id
+            WHERE gb.is_active=1 AND gb.ends_at >= NOW()
+            ORDER BY gb.id DESC LIMIT 3
+            """
+        )
+        lottery = query_one("SELECT * FROM lotteries WHERE is_active=1 AND ends_at >= NOW() ORDER BY id DESC LIMIT 1")
+    except pymysql.MySQLError:
+        products, categories, coupons, groups, lottery = fallback_home_data()
+        if keyword:
+            products = [p for p in products if keyword in p["name"] or keyword in p["description"]]
+        if category:
+            products = [p for p in products if p["category"] == category]
+        flash("云数据库连接较慢，当前先展示演示数据")
     return render_template("home.html", products=products, categories=categories, coupons=coupons, groups=groups, lottery=lottery)
 
 
@@ -160,7 +237,11 @@ def login():
     if request.method == "POST":
         username = request.form["username"].strip()
         password = request.form["password"]
-        user = query_one("SELECT * FROM users WHERE username=%s", (username,))
+        try:
+            user = query_one("SELECT * FROM users WHERE username=%s", (username,))
+        except pymysql.MySQLError:
+            user = None
+            flash("云数据库连接超时，请稍后再登录")
         if user and check_password_hash(user["password_hash"], password):
             session.clear()
             session["user_id"] = user["id"]
@@ -184,7 +265,15 @@ def logout():
 
 @app.route("/product/<int:product_id>")
 def product_detail(product_id):
-    product = query_one("SELECT * FROM products WHERE id=%s AND is_active=1", (product_id,))
+    try:
+        product = query_one("SELECT * FROM products WHERE id=%s AND is_active=1", (product_id,))
+    except pymysql.MySQLError:
+        products, categories, coupons, groups, lottery = fallback_home_data()
+        product = next((item for item in products if item["id"] == product_id), None)
+        product_groups = [group for group in groups if product and group["product_name"] == product["name"]]
+        if product:
+            flash("云数据库连接较慢，当前先展示演示商品")
+            return render_template("product.html", product=product, coupons=coupons, groups=product_groups)
     if not product:
         flash("商品不存在")
         return redirect(url_for("home"))
