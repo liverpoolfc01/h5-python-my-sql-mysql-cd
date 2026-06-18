@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from decimal import Decimal
 
 import pymysql
-from flask import Flask, flash, redirect, render_template, request, session, url_for
+from flask import Flask, flash, g, has_request_context, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash
 
 
@@ -37,6 +37,21 @@ app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "codex-ecommerce-dev-secret")
 
 
+def get_request_db():
+    if not has_request_context():
+        return None
+    if "db_conn" not in g:
+        g.db_conn = pymysql.connect(**DB_CONFIG)
+    return g.db_conn
+
+
+@app.teardown_appcontext
+def close_request_db(error=None):
+    conn = g.pop("db_conn", None)
+    if conn is not None:
+        conn.close()
+
+
 @contextmanager
 def db():
     conn = pymysql.connect(**DB_CONFIG)
@@ -51,6 +66,11 @@ def db():
 
 
 def query_all(sql, params=()):
+    conn = get_request_db()
+    if conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+            return cur.fetchall()
     with db() as conn:
         with conn.cursor() as cur:
             cur.execute(sql, params)
@@ -58,6 +78,11 @@ def query_all(sql, params=()):
 
 
 def query_one(sql, params=()):
+    conn = get_request_db()
+    if conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+            return cur.fetchone()
     with db() as conn:
         with conn.cursor() as cur:
             cur.execute(sql, params)
