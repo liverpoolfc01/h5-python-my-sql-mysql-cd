@@ -38,6 +38,8 @@ DB_CONFIG = {
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "codex-ecommerce-dev-secret")
+HOME_CACHE = {"expires_at": 0, "data": None}
+HOME_CACHE_TTL = int(os.getenv("HOME_CACHE_TTL", "60"))
 
 FALLBACK_PRODUCTS = [
     ("云感针织衫", "女装", "129.00", 220, "#d85c5c", "柔软亲肤，适合通勤与日常搭配。"),
@@ -186,25 +188,13 @@ def fallback_home_data():
     return products, list(unique_categories.values()), coupons, groups, lottery
 
 
-@app.context_processor
-def inject_user():
-    return {"current_user": {"id": session.get("user_id"), "username": session.get("username"), "role": session.get("role")}}
+def get_home_data():
+    now = time.time()
+    if HOME_CACHE["data"] and HOME_CACHE["expires_at"] > now:
+        return HOME_CACHE["data"]
 
-
-@app.route("/")
-def home():
-    keyword = request.args.get("q", "").strip()
-    category = request.args.get("category", "").strip()
-    filters = ["is_active=1"]
-    params = []
-    if keyword:
-        filters.append("(name LIKE %s OR description LIKE %s)")
-        params.extend([f"%{keyword}%", f"%{keyword}%"])
-    if category:
-        filters.append("category=%s")
-        params.append(category)
     try:
-        products = query_all(f"SELECT * FROM products WHERE {' AND '.join(filters)} ORDER BY id DESC", params)
+        products = query_all("SELECT * FROM products WHERE is_active=1 ORDER BY id DESC")
         categories = query_all("SELECT DISTINCT category FROM products WHERE is_active=1 ORDER BY category")
         coupons = query_all(
             """
@@ -222,13 +212,30 @@ def home():
             """
         )
         lottery = query_one("SELECT * FROM lotteries WHERE is_active=1 AND ends_at >= NOW() ORDER BY id DESC LIMIT 1")
+        data = (products, categories, coupons, groups, lottery)
     except pymysql.MySQLError:
-        products, categories, coupons, groups, lottery = fallback_home_data()
-        if keyword:
-            products = [p for p in products if keyword in p["name"] or keyword in p["description"]]
-        if category:
-            products = [p for p in products if p["category"] == category]
+        data = fallback_home_data()
         flash("云数据库连接较慢，当前先展示演示数据")
+
+    HOME_CACHE["data"] = data
+    HOME_CACHE["expires_at"] = now + HOME_CACHE_TTL
+    return data
+
+
+@app.context_processor
+def inject_user():
+    return {"current_user": {"id": session.get("user_id"), "username": session.get("username"), "role": session.get("role")}}
+
+
+@app.route("/")
+def home():
+    keyword = request.args.get("q", "").strip()
+    category = request.args.get("category", "").strip()
+    products, categories, coupons, groups, lottery = get_home_data()
+    if keyword:
+        products = [p for p in products if keyword in p["name"] or keyword in p["description"]]
+    if category:
+        products = [p for p in products if p["category"] == category]
     return render_template("home.html", products=products, categories=categories, coupons=coupons, groups=groups, lottery=lottery)
 
 
