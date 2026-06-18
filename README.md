@@ -41,3 +41,19 @@ http://127.0.0.1:5000/
 ```bash
 DB_HOST=127.0.0.1 DB_PORT=3306 DB_USER=root DB_PASSWORD=xxx DB_NAME=codex_ecommerce_demo .venv/bin/python init_db.py
 ```
+
+## Render 免费部署
+
+项目已包含 `render.yaml`，可以在 Render 导入 GitHub 仓库后创建免费 Web Service。创建时选择 Singapore 区域，并填写以下环境变量：
+
+- `DB_HOST`
+- `DB_PORT`
+- `DB_USER`
+- `DB_PASSWORD`
+- `DB_NAME`
+
+启动命令：
+
+```bash
+gunicorn app:app
+```

@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: h5-python-my-sql-mysql-cd
+    runtime: python
+    plan: free
+    region: singapore
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DB_CONNECT_TIMEOUT
+        value: "2"
+      - key: HOME_CACHE_TTL
+        value: "120"
